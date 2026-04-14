@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from query import get_qa_chain, ask_with_fallback
 from ingest import ingest_docs
@@ -24,7 +24,7 @@ class QuestionRequest(BaseModel):
 
 @app.get("/")
 def root():
-    return {"status": "RAG Chat API is running"}
+    return FileResponse("./index.html")
 
 @app.get("/health")
 def health():
@@ -33,23 +33,19 @@ def health():
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     global qa_chain
-
     os.makedirs("./docs", exist_ok=True)
     for f in os.listdir("./docs"):
         try:
             os.remove(os.path.join("./docs", f))
         except Exception:
             pass
-
     file_path = f"./docs/{file.filename}"
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
     print(f"Saved: {file_path}")
-
     vectorstore = ingest_docs("./docs")
     if vectorstore is None:
         return {"error": "Could not extract text from this file."}
-
     qa_chain = get_qa_chain(vectorstore)
     print(f"Chain ready for: {file.filename}")
     return {"message": f"Uploaded and indexed {file.filename}"}
