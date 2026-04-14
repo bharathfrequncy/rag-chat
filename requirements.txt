@@ -9,5 +9,4 @@ pypdf
 python-dotenv
 python-multipart
 openai
-openai-embeddings
 aiofiles
