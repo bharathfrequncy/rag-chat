@@ -9,5 +9,5 @@ pypdf
 python-dotenv
 python-multipart
 openai
-sentence-transformers
+openai-embeddings
 aiofiles
