@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from query import get_qa_chain, ask_with_fallback
 from ingest import ingest_docs
@@ -16,17 +17,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global chain — rebuilt fresh on every upload
 qa_chain = None
 
 class QuestionRequest(BaseModel):
     question: str
 
+@app.get("/")
+def root():
+    return {"status": "RAG Chat API is running"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     global qa_chain
 
-    # Clear old docs folder
     os.makedirs("./docs", exist_ok=True)
     for f in os.listdir("./docs"):
         try:
@@ -34,18 +41,15 @@ async def upload_file(file: UploadFile = File(...)):
         except Exception:
             pass
 
-    # Save new file
     file_path = f"./docs/{file.filename}"
     with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
     print(f"Saved: {file_path}")
 
-    # Build fresh in-memory index
     vectorstore = ingest_docs("./docs")
     if vectorstore is None:
-        return {"error": "Could not extract text from this file. Make sure the PDF has real selectable text."}
+        return {"error": "Could not extract text from this file."}
 
-    # Build fresh chain from new vectorstore
     qa_chain = get_qa_chain(vectorstore)
     print(f"Chain ready for: {file.filename}")
     return {"message": f"Uploaded and indexed {file.filename}"}
@@ -69,7 +73,3 @@ def ask_question(req: QuestionRequest):
         if "429" in err or "rate" in err.lower():
             return {"error": "Rate limited. Please wait a moment and try again."}
         return {"error": f"Something went wrong: {err}"}
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}

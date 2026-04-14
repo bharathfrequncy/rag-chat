@@ -1,4 +1,3 @@
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
@@ -30,7 +29,7 @@ def get_llm():
         openai_api_key=os.getenv("OPENROUTER_API_KEY"),
         openai_api_base="https://openrouter.ai/api/v1",
         default_headers={
-            "HTTP-Referer": "http://localhost:3000",
+            "HTTP-Referer": "https://rag-chat.onrender.com",
             "X-Title": "RAG Chat App",
         },
         temperature=0

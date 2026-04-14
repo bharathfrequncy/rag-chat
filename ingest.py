@@ -1,6 +1,5 @@
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.schema import Document
 import chromadb
@@ -9,10 +8,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
 def get_embeddings():
-    return embeddings
+    # Import here so it loads only when needed, not at startup
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 def ingest_docs(docs_folder="./docs"):
     documents = []
@@ -22,7 +21,7 @@ def ingest_docs(docs_folder="./docs"):
             loader = PyPDFLoader(pdf_path)
             docs = loader.load()
             total = " ".join(d.page_content for d in docs).strip()
-            if len(total.replace(" ","").replace("\n","")) > 50:
+            if len(total.replace(" ", "").replace("\n", "")) > 50:
                 documents.extend(docs)
                 print(f"Loaded {pdf_path}: {len(total)} chars")
             else:
@@ -48,7 +47,7 @@ def ingest_docs(docs_folder="./docs"):
     chunks = splitter.split_documents(documents)
     print(f"Created {len(chunks)} chunks")
 
-    # Use in-memory ChromaDB — no file locking on Windows
+    embeddings = get_embeddings()
     client = chromadb.EphemeralClient()
     vectorstore = Chroma(
         client=client,
